@@ -153,7 +153,7 @@ public class RulloScript : MonoBehaviour {
     private IEnumerator ProcessTwitchCommand(string command)
     {
         command = command.ToLowerInvariant();
-        if (command == "submit")
+        if(command == "submit")
         {
             yield return null;
             buttons[36].OnInteract();
