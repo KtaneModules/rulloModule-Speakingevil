@@ -23,6 +23,7 @@ public class RulloScript : MonoBehaviour {
     private int[] sums = new int[12];
     private bool[,] off = new bool[6,6];
     private bool[,] locked = new bool[6,6];
+    private string[] sol = new string[6];
     private IEnumerator press;
     private bool held;
 
@@ -81,7 +82,6 @@ public class RulloScript : MonoBehaviour {
             blabels[i].text = r.ToString();
         }
         string[][] loggrid = new string[6][] { new string[6], new string[6], new string[6], new string[6], new string[6], new string[6] };
-        string[] sol = new string[6];
         for (int i = 0; i < 6; i++)
         {
             for (int j = 0; j < 6; j++)
@@ -147,17 +147,15 @@ public class RulloScript : MonoBehaviour {
         }
     }
 
-#pragma warning disable 414
+    #pragma warning disable 414
     private string TwitchHelpMessage = "!{0} toggle <a-f><1-6> [Press buttons] | !{0} flag <a-f><1-6> [Holds buttons] | [Chain toggles or flags by separating the coordinates with spaces] | !{0} submit";
-#pragma warning restore 414
+    #pragma warning restore 414
     private IEnumerator ProcessTwitchCommand(string command)
     {
         command = command.ToLowerInvariant();
         if(command == "submit")
         {
             yield return null;
-            yield return "solve";
-            yield return "strike";
             buttons[36].OnInteract();
         }
         else
@@ -166,7 +164,7 @@ public class RulloScript : MonoBehaviour {
             int[,] prompts = new int[command.Length - 1, 2];
             if(commands[0] != "toggle" && commands[0] != "flag")
             {
-                yield return "sendtochaterror Invalid command: " + commands[0];
+                yield return "sendtochaterror!f Invalid command: " + commands[0];
                 yield break;
             }
             bool flag = commands[0] == "flag";
@@ -174,7 +172,7 @@ public class RulloScript : MonoBehaviour {
             {
                 if(commands[i].Length != 2 || !"abcdef".Contains(commands[i][0].ToString()) || !"123456".Contains(commands[i][1]))
                 {
-                    yield return "sendtochaterror Invalid command: " + commands[i];
+                    yield return "sendtochaterror!f Invalid coordinate: " + commands[i];
                     yield break;
                 }
                 else
@@ -192,5 +190,41 @@ public class RulloScript : MonoBehaviour {
                 buttons[b].OnInteractEnded();
             }
         }
+    }
+
+    private IEnumerator TwitchHandleForcedSolve()
+    {
+        bool[,] parsedSol = new bool[6,6];
+        for (int i = 0; i < 6; i++)
+        {
+            string[] strSol = sol[i].Trim().Split(' ');
+            for (int j = 0; j < 6; j++)
+            {
+                if (strSol[j] == "\u25cf")
+                    parsedSol[i, j] = true;
+                else
+                    parsedSol[i, j] = false;
+            }
+        }
+        for (int i = 0; i < 6; i++)
+        {
+            for (int j = 0; j < 6; j++)
+            {
+                if (parsedSol[i, j] != off[i, j])
+                {
+                    if (locked[i, j])
+                    {
+                        buttons[i * 6 + j].OnInteract();
+                        while (!held) { yield return true; }
+                        buttons[i * 6 + j].OnInteractEnded();
+                    }
+                    buttons[i * 6 + j].OnInteract();
+                    yield return new WaitForSeconds(0.1f);
+                    buttons[i * 6 + j].OnInteractEnded();
+                }
+            }
+        }
+        yield return null;
+        buttons[36].OnInteract();
     }
 }
